@@ -12,6 +12,7 @@ namespace Voxels {
     public struct MeshSettings {
         public bool FrontFacesOnly;
         public bool AmbientOcclusion;
+        public bool FakeLighting;
         public MeshType MeshType;
     }
 
@@ -40,14 +41,17 @@ namespace Voxels {
 
                         var color = voxelData.ColorOf(i);
                         if (color.A > 0) {
+                            var lightLevel = settings.FakeLighting ? 0.5f : 1.0f;
+                            var lightDelta = settings.FakeLighting ? 0.1f : 0.0f;
+
                             if (!settings.FrontFacesOnly) {
-                                RenderQuad(voxelData, i, color * 0.5f, -XYZ.OneZ); // Bottom
-                                RenderQuad(voxelData, i, color * 0.6f, XYZ.OneX); // Right
-                                RenderQuad(voxelData, i, color * 0.7f, XYZ.OneY); // Back
+                                RenderQuad(voxelData, i, color * (lightLevel+lightDelta*0), -XYZ.OneZ); // Bottom
+                                RenderQuad(voxelData, i, color * (lightLevel+lightDelta*1), XYZ.OneX); // Right
+                                RenderQuad(voxelData, i, color * (lightLevel+lightDelta*2), XYZ.OneY); // Back
                             }
-                            RenderQuad(voxelData, i, color*0.8f, -XYZ.OneX); // Left
-                            RenderQuad(voxelData, i, color*0.9f, -XYZ.OneY); // Front
-                            RenderQuad(voxelData, i, color*1.0f, XYZ.OneZ); // Top
+                            RenderQuad(voxelData, i, color*(lightLevel+lightDelta*3), -XYZ.OneX); // Left
+                            RenderQuad(voxelData, i, color*(lightLevel+lightDelta*4), -XYZ.OneY); // Front
+                            RenderQuad(voxelData, i, color*(lightLevel+lightDelta*5), XYZ.OneZ); // Top
                         }
                     }
                 }
