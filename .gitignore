@@ -4,6 +4,8 @@
 
 *.suo
 *.meta
+*.bak
 bin/
 obj/
 /.vs
+
