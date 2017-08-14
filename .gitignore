@@ -6,3 +6,4 @@
 *.meta
 bin/
 obj/
+/.vs
