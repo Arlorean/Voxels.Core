@@ -13,6 +13,7 @@ namespace Voxels {
         public bool FrontFacesOnly;
         public bool AmbientOcclusion;
         public bool FakeLighting;
+        public bool FloorShadow;
         public MeshType MeshType;
     }
 
@@ -36,6 +37,9 @@ namespace Voxels {
         void CreateMesh(VoxelData voxelData) {
             for (var y = voxelData.size.Y - 1; y >= 0; --y) {
                 for (var x = voxelData.size.X - 1; x >= 0; --x) {
+                    if (settings.FloorShadow) {
+                        RenderQuad(voxelData, new XYZ(x, y, -1), Color.Red, XYZ.OneZ); // Top
+                    }
                     for (var z = 0; z < voxelData.size.Z; ++z) {
                         var i = new XYZ(x, y, z);
 
