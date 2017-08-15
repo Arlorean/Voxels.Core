@@ -41,6 +41,13 @@ namespace Voxels {
             B = c.B;
             A = a;
         }
+        public Color(float r, float g, float b, float a) {
+            RGBA = 0;
+            R = (byte)(r * 255);
+            G = (byte)(g * 255);
+            B = (byte)(b * 255);
+            A = (byte)(a * 255);
+        }
 
         public static Color operator * (Color c, float f) {
             return new Color((byte)(c.R * f), (byte)(c.G * f), (byte)(c.B * f), c.A);
@@ -113,6 +120,7 @@ namespace Voxels {
             return this.RGBA == other.RGBA;
         }
 
+        public static readonly Color Transparent = new Color(0, 0, 0, 0);
         public static readonly Color Black = new Color(0, 0, 0);
         public static readonly Color White = new Color(255, 255, 255);
         public static readonly Color Red = new Color(255, 0, 0);
