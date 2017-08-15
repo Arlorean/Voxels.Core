@@ -34,7 +34,12 @@ namespace Voxels {
             case 2: r = 0.8f; break;
             case 3: r = 1f; break;
             }
-            return new Color(Color.FromHSV(h, s, v * r), color.A);
+            if (color.A == 0) {
+                return new Color(0, 0, 0, 1-r);
+            }
+            else {
+                return new Color(Color.FromHSV(h, s, v * r), color.A);
+            }
         }
     }
 }

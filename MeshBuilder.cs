@@ -35,11 +35,16 @@ namespace Voxels {
         }
 
         void CreateMesh(VoxelData voxelData) {
+            if (settings.FloorShadow) {
+                for (var x = -1; x <= voxelData.size.X; x++) {
+                    for (var y = -1; y <= voxelData.size.Y; y++) {
+                        RenderQuad(voxelData, new XYZ(x, y, -1), Color.Transparent, XYZ.OneZ); // Top
+                    }
+                }
+            }
+
             for (var y = voxelData.size.Y - 1; y >= 0; --y) {
                 for (var x = voxelData.size.X - 1; x >= 0; --x) {
-                    if (settings.FloorShadow) {
-                        RenderQuad(voxelData, new XYZ(x, y, -1), Color.Red, XYZ.OneZ); // Top
-                    }
                     for (var z = 0; z < voxelData.size.Z; ++z) {
                         var i = new XYZ(x, y, z);
 
