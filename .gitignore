@@ -5,6 +5,7 @@
 *.suo
 *.meta
 *.bak
+*.user
 bin/
 obj/
 /.vs
