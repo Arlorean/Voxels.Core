@@ -23,22 +23,19 @@ namespace Voxels {
             return 3 - (side1 + side2 + corner);
         }
 
-        public static Color AOToColor(Color color, int ao) {
+        public static float AOToOcclusion(int ao) {
+            return new[] { 0.5f, 0.75f, 0.8f, 1.0f }[ao];
+        }
+
+        public static Color CombineColorOcclusion(Color color, float occlusion) {
             float h, s, v;
             color.ToHSV(out h, out s, out v);
 
-            float r = 0;
-            switch (ao) {
-            case 0: r = 0.5f; break;
-            case 1: r = 0.75f; break;
-            case 2: r = 0.8f; break;
-            case 3: r = 1f; break;
-            }
             if (color.A == 0) {
-                return new Color(0, 0, 0, 1-r);
+                return new Color(0, 0, 0, 1 - occlusion);
             }
             else {
-                return new Color(Color.FromHSV(h, s, v * r), color.A);
+                return new Color(Color.FromHSV(h, s, v * occlusion), color.A);
             }
         }
     }
