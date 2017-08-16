@@ -96,13 +96,13 @@ namespace Voxels {
                 }
 
                 // Store vertex colors
-                colors.AddRange(new[] { color, color, color, color });
+                colors.AddRange(new[] { color*lightLevel, color*lightLevel, color*lightLevel, color*lightLevel });
 
                 // Calculate occlusion values
-                occlusion.Add(AmbientOcclusion.AOToOcclusion(a00)*lightLevel);
-                occlusion.Add(AmbientOcclusion.AOToOcclusion(a01)*lightLevel);
-                occlusion.Add(AmbientOcclusion.AOToOcclusion(a11)*lightLevel);
-                occlusion.Add(AmbientOcclusion.AOToOcclusion(a10)*lightLevel);
+                occlusion.Add(AmbientOcclusion.AOToOcclusion(a00));
+                occlusion.Add(AmbientOcclusion.AOToOcclusion(a01));
+                occlusion.Add(AmbientOcclusion.AOToOcclusion(a11));
+                occlusion.Add(AmbientOcclusion.AOToOcclusion(a10));
 
                 // Calculate quad vertices based on adjacent voxels
                 var v0 = p + (adjacent[0] + adjacent[1] + faceUp + XYZ.One) / 2;
