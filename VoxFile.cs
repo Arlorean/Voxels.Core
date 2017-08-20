@@ -8,7 +8,7 @@ namespace Voxels {
         public static VoxelData Read(Stream stream) {
             var voxelData = MagicaVoxel.Read(stream);
             if (voxelData == null) {
-            stream.Seek(0, SeekOrigin.Begin);
+                stream.Seek(0, SeekOrigin.Begin);
                 voxelData = Voxlap.Read(stream);
             }
             return voxelData;
