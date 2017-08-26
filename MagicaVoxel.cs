@@ -44,7 +44,7 @@ namespace Voxels
             }
 
             var voxelData = null as VoxelData;
-            var seenColors = false;
+            var colors = null as Color[];
 
             while (reader.PeekChar() != -1) {
                 var chunkId = reader.ReadUInt32();
@@ -66,11 +66,11 @@ namespace Voxels
                         var y = reader.ReadByte();
                         var z = reader.ReadByte();
                         var c = reader.ReadByte();
-                        voxelData[new XYZ(x, y, z)] = new Voxel() { colorIndex = c };
+                        voxelData[new XYZ(x, y, z)] = new Voxel() { Index = c };
                     }
                     break;
                 case RGBA:
-                    seenColors = true;
+                    colors = new Color[256];
                     // last color is not used, so we only need to read 255 colors
                     for (var i = 1; i < 256; ++i) {
                         byte r = reader.ReadByte();
@@ -88,7 +88,7 @@ namespace Voxels
                 }
             }
 
-            if (voxelData != null && !seenColors) {
+            if (voxelData != null && colors == null) {
                 for (var i=0; i < DefaultColors.Length; ++i) {
                     voxelData.Colors[i] = new Color(DefaultColors[i]);
                 }

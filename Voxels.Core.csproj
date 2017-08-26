@@ -54,6 +54,7 @@
     <Compile Include="MagicaVoxel.cs" />
     <Compile Include="MeshBuilder.cs" />
     <Compile Include="QbclFile.cs" />
+    <Compile Include="QbFile.cs" />
     <Compile Include="VoxelImport.cs" />
     <Compile Include="VoxFile.cs" />
     <Compile Include="Voxlap.cs" />

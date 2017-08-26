@@ -22,9 +22,7 @@ namespace Voxels {
                 for (var y = 0; y < sy; y++) {
                     for (var z = 0; z < sz; z++) {
                         // Flip Y and Z to line up with MagicaVoxel import
-                        voxelData[new XYZ(x, (size.Y-1)-y, (size.Z-1)-z)] = new Voxel() {
-                            colorIndex = (byte)(reader.ReadByte()+1) // Colors start at index 1 for MagicaVoxel
-                        };
+                        voxelData[new XYZ(x, (size.Y - 1) - y, (size.Z - 1) - z)] = new Voxel((uint)(reader.ReadByte() + 1)); // Colors start at index 1 for MagicaVoxel
                     }
                 }
             }

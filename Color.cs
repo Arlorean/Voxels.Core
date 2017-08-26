@@ -53,6 +53,15 @@ namespace Voxels {
             return new Color((byte)(c.R * f), (byte)(c.G * f), (byte)(c.B * f), c.A);
         }
 
+        public static Color FromRGBA(uint v) {
+            return new Color(v);
+        }
+
+        public static Color FromBGRA(uint v) {
+            var c = new Color(v);
+            return new Color(c.B, c.G, c.R, c.A);
+        }
+
         public void ToHSV(out float hue, out float saturation, out float value) {
             var r = R / 255f;
             var g = G / 255f;

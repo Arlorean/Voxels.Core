@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Voxels {
@@ -6,7 +8,7 @@ namespace Voxels {
     /// Represents a set of voxels in a fixed size grid.
     /// NOTE: XY is the horizontal plane and Z is the vertical axis.
     /// </summary>
-    public class VoxelData {
+    public class VoxelData : IEnumerable<XYZ> {
         public readonly XYZ size;
         readonly Voxel[] voxels;
         readonly Color[] colors;
@@ -14,11 +16,11 @@ namespace Voxels {
         public VoxelData(XYZ size, Color[] colors) {
             this.size = size;
             this.voxels = new Voxel[size.Volume];
-            this.colors = colors ?? new Color[256];
+            this.colors = colors;
         }
 
         public int Count {
-            get { return voxels.Count(v => v.colorIndex != 0); }
+            get { return voxels.Count(v => v.IsVisible); }
         }
 
         public bool IsValid(XYZ p) {
@@ -47,10 +49,24 @@ namespace Voxels {
         public Color[] Colors { get { return colors; } }
 
         public Color ColorOf(Voxel voxel) {
-            return colors[voxel.colorIndex];
+            return colors != null ? colors[voxel.Index] : voxel.Color;
         }
         public Color ColorOf(XYZ p) {
             return ColorOf(this[p]);
+        }
+
+        public IEnumerator<XYZ> GetEnumerator() {
+            for (var x = 0; x < size.X; ++x) {
+                for (var y = 0; y < size.Y; ++y) {
+                    for (var z = 0; z < size.Z; ++z) {
+                        yield return new XYZ(x, y, z);
+                    }
+                }
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            return GetEnumerator();
         }
     }
 }

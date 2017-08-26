@@ -13,9 +13,9 @@ namespace Voxels {
         /// <param name="up">The voxel above.</param>
         /// <returns>An integer from 0-3 representing the occlusion case.</returns>
         public static int CalculateAO(VoxelData voxelData, XYZ p, XYZ left, XYZ right, XYZ up) {
-            var side1 = Math.Sign(voxelData[p + left + up].colorIndex); // 0 or 1
-            var side2 = Math.Sign(voxelData[p + right + up].colorIndex); // 0 or 1
-            var corner = Math.Sign(voxelData[p + left + right + up].colorIndex); // 0 or 1
+            var side1 = Math.Sign(voxelData[p + left + up].Index); // 0 or 1
+            var side2 = Math.Sign(voxelData[p + right + up].Index); // 0 or 1
+            var corner = Math.Sign(voxelData[p + left + right + up].Index); // 0 or 1
 
             if (side1 == 1 && side2 == 1) {
                 return 0;

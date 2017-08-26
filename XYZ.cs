@@ -25,7 +25,7 @@ namespace Voxels {
             get { return X * Y * Z; }
         }
 
-        public static readonly XYZ Zero = new XYZ(0,0,0);
+        public static readonly XYZ Zero = new XYZ(0, 0, 0);
         public static readonly XYZ One = new XYZ(1,1,1);
         public static readonly XYZ OneX = new XYZ(1, 0, 0);
         public static readonly XYZ OneY = new XYZ(0, 1, 0);
@@ -34,6 +34,8 @@ namespace Voxels {
         public static readonly XYZ OneXZ = new XYZ(1, 0, 1);
         public static readonly XYZ OneYZ = new XYZ(0, 1, 1);
 
+        public static readonly XYZ Min = new XYZ(int.MinValue, int.MinValue, int.MinValue);
+        public static readonly XYZ Max = new XYZ(int.MaxValue, int.MaxValue, int.MaxValue);
 
         public static XYZ operator *(XYZ a, int b) {
             return new XYZ(a.X * b, a.Y * b, a.Z * b);
