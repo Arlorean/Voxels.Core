@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 namespace Voxels
 {
@@ -9,6 +10,10 @@ namespace Voxels
     /// </summary>
 
     public class MagicaVoxel {
+        public static Color GetDefaultColor(int i) {
+            return new Color(DefaultColors[i]);
+        }
+
         static readonly uint[] DefaultColors = new uint[] { // 0xAABBGGRR (little endian)
             0x00000000, 0xffffffff, 0xffccffff, 0xff99ffff, 0xff66ffff, 0xff33ffff, 0xff00ffff, 0xffffccff, 0xffccccff, 0xff99ccff, 0xff66ccff, 0xff33ccff, 0xff00ccff, 0xffff99ff, 0xffcc99ff, 0xff9999ff,
             0xff6699ff, 0xff3399ff, 0xff0099ff, 0xffff66ff, 0xffcc66ff, 0xff9966ff, 0xff6666ff, 0xff3366ff, 0xff0066ff, 0xffff33ff, 0xffcc33ff, 0xff9933ff, 0xff6633ff, 0xff3333ff, 0xff0033ff, 0xffff00ff,
@@ -30,6 +35,7 @@ namespace Voxels
 
         const int VOX_ = ('V') + ('O' << 8) + ('X' << 16) + (' ' << 24);
         const int MAIN = ('M') + ('A' << 8) + ('I' << 16) + ('N' << 24);
+        const int PACK = ('P') + ('A' << 8) + ('C' << 16) + ('K' << 24);
         const int SIZE = ('S') + ('I' << 8) + ('Z' << 16) + ('E' << 24);
         const int XYZI = ('X') + ('Y' << 8) + ('Z' << 16) + ('I' << 24);
         const int RGBA = ('R') + ('G' << 8) + ('B' << 16) + ('A' << 24);
@@ -97,8 +103,65 @@ namespace Voxels
             return voxelData;
         }
 
+        static void Write(BinaryWriter writer, VoxelData voxelData) {
+            if (voxelData.Colors == null) {
+                voxelData = voxelData.CreatePalette();
+            }
+
+            var packSize = 4 * 4;
+            var sizeSize = 6 * 4;
+            var xyziSize = 4 * 4 + (voxelData.Count * 4);
+            var rgbaSize = 3 * 4 + (256 * 4);
+            var mainSize = packSize+(sizeSize+xyziSize)*1+rgbaSize;
+
+            writer.Write(VOX_); // Magic
+            writer.Write(150); // Version
+
+            writer.Write(MAIN); // chunkId
+            writer.Write(0); // chunkSize
+            writer.Write(mainSize); // childChunksSize
+
+            writer.Write(PACK); // chunkId
+            writer.Write(4); // chunkSize
+            writer.Write(0); // childChunksSize
+            writer.Write(1); // 1 child model
+
+            writer.Write(SIZE); // chunkId
+            writer.Write(3*4); // chunkSize
+            writer.Write(0); // childChunksSize
+            writer.Write(voxelData.size.X);
+            writer.Write(voxelData.size.Y); 
+            writer.Write(voxelData.size.Z);
+
+            writer.Write(XYZI); // chunkId
+            writer.Write((voxelData.Count+1)*4); // chunkSize
+            writer.Write(0); // childChunksSize
+            writer.Write(voxelData.Count);
+            foreach (var p in voxelData) {
+                writer.Write((byte)p.X);
+                writer.Write((byte)p.Y);
+                writer.Write((byte)p.Z);
+                writer.Write((byte)voxelData[p].Index);
+            }
+
+            writer.Write(RGBA); // chunkId
+            writer.Write(256 * 4); // chunkSize
+            writer.Write(0); // childChunksSize
+            foreach (var c in voxelData.Colors.Skip(1)) {
+                writer.Write((byte)c.R);
+                writer.Write((byte)c.G);
+                writer.Write((byte)c.B);
+                writer.Write((byte)c.A);
+            }
+            writer.Write(0); // Empty voxel color
+        }
+
         public static VoxelData Read(Stream stream) {
             return Read(new BinaryReader(stream));
+        }
+
+        public static void Write(Stream stream, VoxelData voxelData) {
+            Write(new BinaryWriter(stream), voxelData);
         }
     }
 }

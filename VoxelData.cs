@@ -55,6 +55,24 @@ namespace Voxels {
             return ColorOf(this[p]);
         }
 
+        public VoxelData CreatePalette() {
+            var colors = new List<Color>() { Color.Transparent };
+            var voxelData = new VoxelData(this.size, new Color[256]);
+            foreach (var v in this) {
+                var c = ColorOf(v);
+                var i = colors.IndexOf(c);
+                if (i == -1) {
+                    i = colors.Count;
+                    colors.Add(c);
+                }
+                voxelData[v] = new Voxel((uint)i);
+            }
+            for (var i = 0; i < 256; i++) {
+                voxelData.Colors[i] = i < colors.Count ? colors[i] : MagicaVoxel.GetDefaultColor(i);
+            }
+            return voxelData;
+        }
+
         public IEnumerator<XYZ> GetEnumerator() {
             for (var x = 0; x < size.X; ++x) {
                 for (var y = 0; y < size.Y; ++y) {
