@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -10,8 +11,15 @@ namespace Voxels {
     }
 
     public struct MeshSettings {
-        public bool BackFaces;
-        public bool FrontFaces;
+        float rotation;
+        public float Rotation {
+            get => rotation;
+            set {
+                // Clamp Rotation to 0 to 360
+                //          (-360 to 360) -> (0 to 720) -> (0 to 360)
+                rotation = ((value % 360) + 360) % 360;
+            }
+        }
         public bool FakeLighting;
         public bool FloorShadow;
         public MeshType MeshType;
@@ -36,6 +44,42 @@ namespace Voxels {
             CreateMesh(voxelData);
         }
 
+        /// <summary>
+        /// Enumerate voxels so that they can be rendered back to front without a Z Buffer.
+        /// </summary>
+        IEnumerable<XYZ> GetOrderedVoxels(VoxelData voxelData, List<XYZ> faces) {
+            var xRange = Enumerable.Range(0, voxelData.size.X);
+            var yRange = Enumerable.Range(0, voxelData.size.Y);
+            var zRange = Enumerable.Range(0, voxelData.size.Z);
+
+            if (settings.Rotation >= 270) {
+                xRange = xRange.Reverse();
+                faces.AddRange(new[] { -XYZ.OneX, XYZ.OneY, XYZ.OneZ });
+            }
+            else 
+            if (settings.Rotation >= 180) {
+                xRange = xRange.Reverse();
+                yRange = yRange.Reverse();
+                faces.AddRange(new[] { -XYZ.OneX, -XYZ.OneY, XYZ.OneZ });
+            }
+            else
+            if (settings.Rotation >= 90) {
+                yRange = yRange.Reverse();
+                faces.AddRange(new[] { XYZ.OneX, -XYZ.OneY, XYZ.OneZ });
+            }
+            else {
+                faces.AddRange(new[] { XYZ.OneX, XYZ.OneY, XYZ.OneZ });
+            }
+
+            foreach (var y in yRange) {
+                foreach (var x in xRange) {
+                    foreach (var z in zRange) {
+                        yield return new XYZ(x, y, z);
+                    }
+                }
+            }
+        }
+
         void CreateMesh(VoxelData voxelData) {
             if (settings.FloorShadow) {
                 for (var x = -1; x <= voxelData.size.X; x++) {
@@ -44,29 +88,30 @@ namespace Voxels {
                     }
                 }
             }
-            if (settings.BackFaces || settings.FrontFaces) {
-                for (var y = voxelData.size.Y - 1; y >= 0; --y) {
-                    for (var x = voxelData.size.X - 1; x >= 0; --x) {
-                        for (var z = 0; z < voxelData.size.Z; ++z) {
-                            var i = new XYZ(x, y, z);
+            var faces = new List<XYZ>();
+            foreach (var i in GetOrderedVoxels(voxelData, faces)) {
+                var color = voxelData.ColorOf(i);
+                if (color.A > 0) {
+                    var lightLevel = settings.FakeLighting ? 0.5f : 1.0f;
+                    var lightDelta = settings.FakeLighting ? 0.1f : 0.0f;
 
-                            var color = voxelData.ColorOf(i);
-                            if (color.A > 0) {
-                                var lightLevel = settings.FakeLighting ? 0.5f : 1.0f;
-                                var lightDelta = settings.FakeLighting ? 0.1f : 0.0f;
-
-                                if (settings.BackFaces) {
-                                    RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 0), -XYZ.OneZ); // Bottom
-                                    RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 1), XYZ.OneX); // Right
-                                    RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 2), XYZ.OneY); // Back
-                                }
-                                if (settings.FrontFaces) {
-                                    RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 3), -XYZ.OneX); // Left
-                                    RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 4), -XYZ.OneY); // Front
-                                    RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 5), XYZ.OneZ); // Top
-                                }
-                            }
-                        }
+                    if (faces.Contains(XYZ.OneZ)) {
+                        RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 5), XYZ.OneZ); // Top
+                    }
+                    if (faces.Contains(-XYZ.OneZ)) {
+                        RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 0), -XYZ.OneZ); // Bottom
+                    }
+                    if (faces.Contains(XYZ.OneX)) {
+                        RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 1), XYZ.OneX); // Right
+                    }
+                    if (faces.Contains(-XYZ.OneX)) {
+                        RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 3), -XYZ.OneX); // Left
+                    }
+                    if (faces.Contains(XYZ.OneY)) {
+                        RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 2), XYZ.OneY); // Back
+                    }
+                    if (faces.Contains(-XYZ.OneY)) {
+                        RenderQuad(voxelData, i, color, (lightLevel + lightDelta * 4), -XYZ.OneY); // Front
                     }
                 }
             }
