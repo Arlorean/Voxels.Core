@@ -13,7 +13,7 @@ namespace Voxels {
         readonly Voxel[] voxels;
         readonly Color[] colors;
 
-        public VoxelData(XYZ size, Color[] colors) {
+        public VoxelData(XYZ size, Color[] colors=null) {
             this.size = size;
             this.voxels = new Voxel[size.Volume];
             this.colors = colors;

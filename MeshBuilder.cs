@@ -11,18 +11,32 @@ namespace Voxels {
     }
 
     public struct MeshSettings {
-        float rotation;
-        public float Rotation {
-            get => rotation;
+        float yaw;
+        float pitch;
+        public float Yaw {
+            get => yaw;
             set {
-                // Clamp Rotation to 0 to 360
-                //          (-360 to 360) -> (0 to 720) -> (0 to 360)
-                rotation = ((value % 360) + 360) % 360;
+                yaw = Clamp180(value);
+            }
+        }
+        public float Pitch {
+            get => pitch;
+            set {
+                pitch = Clamp180(value);
             }
         }
         public bool FakeLighting;
         public bool FloorShadow;
         public MeshType MeshType;
+
+        /// <summary>
+        /// How to limit angles in (-180,180) range
+        /// https://stackoverflow.com/a/47680296/256627
+        /// </summary>
+        static float Clamp180(float angle) {
+            angle %= 360;
+            return angle > 180 ? angle - 360 : angle;
+        }
     }
 
     public class MeshBuilder {
@@ -52,23 +66,38 @@ namespace Voxels {
             var yRange = Enumerable.Range(0, voxelData.size.Y);
             var zRange = Enumerable.Range(0, voxelData.size.Z);
 
-            if (settings.Rotation >= 270) {
+            if (settings.Yaw >= 90) {
                 xRange = xRange.Reverse();
-                faces.AddRange(new[] { -XYZ.OneX, XYZ.OneY, XYZ.OneZ });
-            }
-            else 
-            if (settings.Rotation >= 180) {
-                xRange = xRange.Reverse();
-                yRange = yRange.Reverse();
-                faces.AddRange(new[] { -XYZ.OneX, -XYZ.OneY, XYZ.OneZ });
+                faces.AddRange(new[] { -XYZ.OneX, XYZ.OneY });
             }
             else
-            if (settings.Rotation >= 90) {
+            if (settings.Yaw >= 0) {
+                xRange = xRange.Reverse();
                 yRange = yRange.Reverse();
-                faces.AddRange(new[] { XYZ.OneX, -XYZ.OneY, XYZ.OneZ });
+                faces.AddRange(new[] { -XYZ.OneX, -XYZ.OneY });
+            }
+            else
+            if (settings.Yaw >= -90) {
+                yRange = yRange.Reverse();
+                faces.AddRange(new[] { XYZ.OneX, -XYZ.OneY });
             }
             else {
-                faces.AddRange(new[] { XYZ.OneX, XYZ.OneY, XYZ.OneZ });
+                faces.AddRange(new[] { XYZ.OneX, XYZ.OneY });
+            }
+
+            if (settings.Pitch >= 90) {
+                faces.AddRange(new[] { XYZ.OneZ });
+            }
+            else
+            if (settings.Pitch >= 0) {
+                faces.AddRange(new[] { -XYZ.OneZ });
+            }
+            else
+            if (settings.Pitch >= -90) {
+                faces.AddRange(new[] { XYZ.OneZ });
+            }
+            else {
+                faces.AddRange(new[] { -XYZ.OneZ });
             }
 
             foreach (var y in yRange) {

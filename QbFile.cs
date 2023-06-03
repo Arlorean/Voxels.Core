@@ -43,7 +43,7 @@ namespace Voxels {
                 };
                 positions.Add(new XYZ(posX, posY, posZ));
 
-                var matrix = new VoxelData(new XYZ(sizeX, sizeY, sizeZ), null);
+                var matrix = new VoxelData(new XYZ(sizeX, sizeY, sizeZ));
                 if (compression == 0) {
                     for (var z = 0; z < sizeZ; z++) {
                         for (var y = 0; y < sizeY; y++) {

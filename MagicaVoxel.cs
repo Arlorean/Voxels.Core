@@ -136,12 +136,15 @@ namespace Voxels
             writer.Write(XYZI); // chunkId
             writer.Write((voxelData.Count+1)*4); // chunkSize
             writer.Write(0); // childChunksSize
-            writer.Write(voxelData.Count);
+            writer.Write(voxelData.Count); // Count of Voxels where IsVisible is true
             foreach (var p in voxelData) {
-                writer.Write((byte)p.X);
-                writer.Write((byte)p.Y);
-                writer.Write((byte)p.Z);
-                writer.Write((byte)voxelData[p].Index);
+                var v = voxelData[p];
+                if (v.IsVisible) {
+                    writer.Write((byte)p.X);
+                    writer.Write((byte)p.Y);
+                    writer.Write((byte)p.Z);
+                    writer.Write((byte)v.Index);
+                }
             }
 
             writer.Write(RGBA); // chunkId
