@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -33,12 +35,21 @@ namespace Voxels
             0xff880000, 0xff770000, 0xff550000, 0xff440000, 0xff220000, 0xff110000, 0xffeeeeee, 0xffdddddd, 0xffbbbbbb, 0xffaaaaaa, 0xff888888, 0xff777777, 0xff555555, 0xff444444, 0xff222222, 0xff111111,
         };
 
-        const int VOX_ = ('V') + ('O' << 8) + ('X' << 16) + (' ' << 24);
-        const int MAIN = ('M') + ('A' << 8) + ('I' << 16) + ('N' << 24);
-        const int PACK = ('P') + ('A' << 8) + ('C' << 16) + ('K' << 24);
-        const int SIZE = ('S') + ('I' << 8) + ('Z' << 16) + ('E' << 24);
-        const int XYZI = ('X') + ('Y' << 8) + ('Z' << 16) + ('I' << 24);
-        const int RGBA = ('R') + ('G' << 8) + ('B' << 16) + ('A' << 24);
+        const uint VOX_ = ('V') + ('O' << 8) + ('X' << 16) + (' ' << 24);
+        const uint MAIN = ('M') + ('A' << 8) + ('I' << 16) + ('N' << 24);
+        const uint PACK = ('P') + ('A' << 8) + ('C' << 16) + ('K' << 24);
+        const uint SIZE = ('S') + ('I' << 8) + ('Z' << 16) + ('E' << 24);
+        const uint XYZI = ('X') + ('Y' << 8) + ('Z' << 16) + ('I' << 24);
+        const uint RGBA = ('R') + ('G' << 8) + ('B' << 16) + ('A' << 24);
+        const uint nTRN = ('n') + ('T' << 8) + ('R' << 16) + ('N' << 24);
+        const uint nGRP = ('n') + ('G' << 8) + ('R' << 16) + ('P' << 24);
+        const uint nSHP = ('n') + ('S' << 8) + ('H' << 16) + ('P' << 24);
+        const uint LAYR = ('L') + ('A' << 8) + ('Y' << 16) + ('R' << 24);
+        const uint MATL = ('M') + ('A' << 8) + ('T' << 16) + ('L' << 24);
+        const uint rOBJ = ('r') + ('O' << 8) + ('B' << 16) + ('J' << 24);
+        const uint rCAM = ('r') + ('C' << 8) + ('A' << 16) + ('M' << 24);
+        const uint NOTE = ('N') + ('O' << 8) + ('T' << 16) + ('E' << 24);
+        const uint IMAP = ('I') + ('M' << 8) + ('A' << 16) + ('P' << 24);
 
         static VoxelData Read(BinaryReader reader)
         {
@@ -49,22 +60,29 @@ namespace Voxels
                 return null;
             }
 
+            var voxelModels = new List<VoxelData>();
             var voxelData = null as VoxelData;
             var colors = null as Color[];
 
             while (reader.PeekChar() != -1) {
                 var chunkId = reader.ReadUInt32();
                 var chunkSize = reader.ReadInt32();
-                var childChunks = reader.ReadInt32();
+                var childChunksSize = reader.ReadInt32();
 
                 switch (chunkId) {
+                case MAIN:
+                    Debug.Assert(chunkSize == 0);
+                    continue;
+
                 case SIZE:
                     var sx = reader.ReadInt32();
                     var sy = reader.ReadInt32();
                     var sz = reader.ReadInt32();
-                    reader.ReadBytes(chunkSize - sizeof(int) * 3);
+                    Debug.Assert(chunkSize == sizeof(int) * 3);
                     voxelData = new VoxelData(new XYZ(sx, sy, sz), new Color[256]);
+                    voxelModels.Add(voxelData);
                     break;
+
                 case XYZI:
                     var n = reader.ReadInt32();
                     for (var i = 0; i < n; ++i) {
@@ -75,6 +93,7 @@ namespace Voxels
                         voxelData[new XYZ(x, y, z)] = new Voxel() { Index = c };
                     }
                     break;
+
                 case RGBA:
                     colors = new Color[256];
                     // last color is not used, so we only need to read 255 colors
@@ -88,7 +107,106 @@ namespace Voxels
                     // NOTICE : skip the last reserved color
                     reader.ReadUInt32();
                     break;
+
+                case nTRN: {
+                        var nodeId = reader.ReadInt32();
+                        var nodeAttributes = ReadDICT(reader);
+                        var childNodeId = reader.ReadInt32();
+                        var reservedId = reader.ReadInt32(); Debug.Assert(reservedId == -1);
+                        var layerId = reader.ReadInt32();
+                        var numFrames = reader.ReadInt32(); Debug.Assert(numFrames > 0);
+
+                        var frames = new List<Dictionary<string, string>>();
+                        for (int i = 0; i < numFrames; i++) {
+                            var frame = ReadDICT(reader);
+                            frames.Add(frame);
+                        }
+                    }
+                    break;
+
+                case nGRP: {
+                        var nodeId = reader.ReadInt32();
+                        var nodeAttributes = ReadDICT(reader);
+                        var numChildNodes = reader.ReadInt32();
+
+                        var childNodeIds = new List<int>();
+                        for (int i = 0; i < numChildNodes; i++) {
+                            var childNodeId = reader.ReadInt32();
+                            childNodeIds.Add(childNodeId);
+                        }
+                    }
+                    break;
+
+                case nSHP: {
+                        var nodeId = reader.ReadInt32();
+                        var nodeAttributes = ReadDICT(reader);
+                        var numModels = reader.ReadInt32(); Debug.Assert(numModels > 0);
+
+                        var models = new List<(int,Dictionary<string,string>)>();
+                        for (int i = 0; i < numModels; i++) {
+                            var modelId = reader.ReadInt32();
+                            var modelAttributes = ReadDICT(reader);
+                            models.Add((modelId, modelAttributes));
+                        }
+                    }
+                    break;
+
+                case LAYR: {
+                        var layerId = reader.ReadInt32();
+                        var layerAttributes = ReadDICT(reader);
+                        var reservedId = reader.ReadInt32(); Debug.Assert(reservedId == -1);
+
+                        // TODO: Process layers
+                    }
+                    break;
+
+                case MATL: {
+                        var materialId = reader.ReadInt32();
+                        var materialAttributes = ReadDICT(reader);
+
+                        // TODO: Process materials
+                    }
+                    break;
+
+                case rOBJ: {
+                        var renderingAttributes = ReadDICT(reader);
+
+                        // TODO: Process rendering
+                    }
+                    break;
+
+                case rCAM: {
+                        var cameraId = reader.ReadInt32();
+                        var cameraAttributes = ReadDICT(reader);
+
+                        // TODO: Process cameras
+                    }
+                    break;
+
+                case NOTE: {
+                        var numColorNames = reader.ReadInt32();
+
+                        var colorNames = new List<string>();
+                        for (int i = 0; i < numColorNames; i++) {
+                            colorNames.Add(ReadSTRING(reader));
+                        }
+                    }
+                    break;
+
+                case IMAP: {
+                        var paletteIndices = new List<byte>();
+                        for (int i = 0; i < 256; i++) {
+                            // NOTE: The online docs say it's an array of int32 but in fact it's an array of int8 (bytes).
+                            // https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox-extension.txt
+                            // https://github.com/ephtracy/voxel-model/issues/19#issuecomment-739324018
+                            paletteIndices.Add(reader.ReadByte());  
+                        }
+                    }
+                    break;
+
                 default:
+                    var chunkName = System.Text.Encoding.ASCII.GetString(BitConverter.GetBytes(chunkId));
+                    Console.WriteLine($"Skipping unknown chunk: '{chunkName}'");
                     reader.ReadBytes(chunkSize);
                     break;
                 }
@@ -101,6 +219,23 @@ namespace Voxels
             }
  
             return voxelData;
+        }
+
+        static Dictionary<string, string> ReadDICT(BinaryReader reader) {
+            var n = reader.ReadInt32();
+            var dict = new Dictionary<string, string>();
+
+            for (var i=0; i < n; i++) {
+                dict.Add(ReadSTRING(reader), ReadSTRING(reader)); 
+            }
+
+            return dict;
+        }
+
+        static string ReadSTRING(BinaryReader reader) {
+            var bufferSize = reader.ReadInt32();
+            var buffer = reader.ReadBytes(bufferSize);
+            return System.Text.Encoding.ASCII.GetString(buffer);
         }
 
         static void Write(BinaryWriter writer, VoxelData voxelData) {
