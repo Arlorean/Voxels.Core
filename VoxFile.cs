@@ -6,12 +6,14 @@ namespace Voxels {
     /// </summary>
     public class VoxFile {
         public static VoxelData Read(Stream stream) {
-            var voxelData = MagicaVoxel.Read(stream);
-            if (voxelData == null) {
-                stream.Seek(0, SeekOrigin.Begin);
-                voxelData = Voxlap.Read(stream);
+            var magicaVoxel = new MagicaVoxel();
+            if (magicaVoxel.Read(stream)) {
+                return magicaVoxel.Flatten(); 
             }
-            return voxelData;
+            else {
+                stream.Seek(0, SeekOrigin.Begin);
+                return Voxlap.Read(stream);
+            }
         }
     }
 }

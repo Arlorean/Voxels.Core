@@ -40,10 +40,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AmbientOcclusion.cs" />
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="BoundsXYZ.cs" />
     <Compile Include="Color.cs" />
     <Compile Include="MagicaVoxel.cs" />
     <Compile Include="MeshBuilder.cs" />

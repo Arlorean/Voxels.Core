@@ -99,7 +99,7 @@ namespace Voxels {
                 });
             var maxExtents = Enumerable.Range(0, matrixCount)
                 .Aggregate(XYZ.Min, (a, i) => {
-                    var v = positions[i] + matrices[i].size;
+                    var v = positions[i] + matrices[i].Size;
                     return new XYZ(Math.Max(a.X, v.X), Math.Max(a.Y, v.Y), Math.Max(a.Z, v.Z));
                 });
             var extents = maxExtents - minExtents;
@@ -109,9 +109,9 @@ namespace Voxels {
                 var matrix = matrices[i];
                 var offset = positions[i] - minExtents; // Start at 0,0,0
 
-                for (var x = 0; x < matrix.size.X; ++x) {
-                    for (var y = 0; y < matrix.size.Y; ++y) {
-                        for (var z = 0; z < matrix.size.Z; ++z) {
+                for (var x = 0; x < matrix.Size.X; ++x) {
+                    for (var y = 0; y < matrix.Size.Y; ++y) {
+                        for (var z = 0; z < matrix.Size.Z; ++z) {
                             var pos = new XYZ(x, y, z);
                             voxelData[pos+offset] = matrix[pos];
                         }
@@ -120,7 +120,7 @@ namespace Voxels {
             }
 
             // Orient .qb so thumbnail matches Qubicle default view
-            var s = voxelData.size;
+            var s = voxelData.Size;
             var d = new VoxelData(new XYZ(s.X, s.Z, s.Y), voxelData.Colors);
             foreach (var i in voxelData) {
                 if (zAxisOrientation == 0) { // LEFT

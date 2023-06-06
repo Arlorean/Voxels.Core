@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 
 namespace Voxels {
     /// <summary>
@@ -77,6 +78,19 @@ namespace Voxels {
 
         public override string ToString() {
             return string.Format("{0}|{1}|{2}", X, Y, Z);
+        }
+
+        public XYZ Transform(Matrix4x4 matrix) {
+            return XYZ.FromVector3(Vector3.Transform(ToVector3(), matrix));
+        }
+
+
+        public Vector3 ToVector3() {
+            return new Vector3(X, Y, Z);
+        }
+
+        public static XYZ FromVector3(Vector3 v) {
+            return new XYZ((int)v.X, (int)v.Y, (int)v.Z);
         }
     }
 }

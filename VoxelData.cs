@@ -9,14 +9,15 @@ namespace Voxels {
     /// NOTE: XY is the horizontal plane and Z is the vertical axis.
     /// </summary>
     public class VoxelData : IEnumerable<XYZ> {
-        public readonly XYZ size;
-        readonly Voxel[] voxels;
-        readonly Color[] colors;
+        Voxel[] voxels;
+
+        public XYZ Size { get; }
+        public Color[] Colors { get; set; }
 
         public VoxelData(XYZ size, Color[] colors=null) {
-            this.size = size;
             this.voxels = new Voxel[size.Volume];
-            this.colors = colors;
+            this.Size = size;
+            this.Colors = colors;
         }
 
         public int Count {
@@ -24,21 +25,21 @@ namespace Voxels {
         }
 
         public bool IsValid(XYZ p) {
-            return (p.X >= 0 && p.X < size.X)
-                && (p.Y >= 0 && p.Y < size.Y)
-                && (p.Z >= 0 && p.Z < size.Z);
+            return (p.X >= 0 && p.X < Size.X)
+                && (p.Y >= 0 && p.Y < Size.Y)
+                && (p.Z >= 0 && p.Z < Size.Z);
         }
 
         public Voxel this[XYZ p] {
             get {
                 if (IsValid(p)) {
-                    return voxels[p.X * (size.Y * size.Z) + p.Y * size.Z + p.Z];
+                    return voxels[p.X * (Size.Y * Size.Z) + p.Y * Size.Z + p.Z];
                 }
                 return Voxel.Empty;
             }
             set {
                 if (IsValid(p)) {
-                    voxels[p.X * (size.Y * size.Z) + p.Y * size.Z + p.Z] = value;
+                    voxels[p.X * (Size.Y * Size.Z) + p.Y * Size.Z + p.Z] = value;
                 }
                 else {
                     throw new ArgumentOutOfRangeException("p", p, "point not in voxel data set.");
@@ -46,10 +47,14 @@ namespace Voxels {
             }
         }
 
-        public Color[] Colors { get { return colors; } }
+        public void Add(VoxelData voxelData) {
+            foreach (var p in voxelData) {
+                this[p] = voxelData[p];
+            }
+        }
 
         public Color ColorOf(Voxel voxel) {
-            return colors != null ? colors[voxel.Index] : voxel.Color;
+            return Colors != null ? Colors[voxel.Index] : voxel.Color;
         }
         public Color ColorOf(XYZ p) {
             return ColorOf(this[p]);
@@ -57,7 +62,7 @@ namespace Voxels {
 
         public VoxelData CreatePalette() {
             var colors = new List<Color>() { Color.Transparent };
-            var voxelData = new VoxelData(this.size, new Color[256]);
+            var voxelData = new VoxelData(this.Size, new Color[256]);
             foreach (var v in this) {
                 var c = ColorOf(v);
                 var i = colors.IndexOf(c);
@@ -74,9 +79,9 @@ namespace Voxels {
         }
 
         public IEnumerator<XYZ> GetEnumerator() {
-            for (var x = 0; x < size.X; ++x) {
-                for (var y = 0; y < size.Y; ++y) {
-                    for (var z = 0; z < size.Z; ++z) {
+            for (var x = 0; x < Size.X; ++x) {
+                for (var y = 0; y < Size.Y; ++y) {
+                    for (var z = 0; z < Size.Z; ++z) {
                         yield return new XYZ(x, y, z);
                     }
                 }

@@ -62,9 +62,9 @@ namespace Voxels {
         /// Enumerate voxels so that they can be rendered back to front without a Z Buffer.
         /// </summary>
         IEnumerable<XYZ> GetOrderedVoxels(VoxelData voxelData, List<XYZ> faces) {
-            var xRange = Enumerable.Range(0, voxelData.size.X);
-            var yRange = Enumerable.Range(0, voxelData.size.Y);
-            var zRange = Enumerable.Range(0, voxelData.size.Z);
+            var xRange = Enumerable.Range(0, voxelData.Size.X);
+            var yRange = Enumerable.Range(0, voxelData.Size.Y);
+            var zRange = Enumerable.Range(0, voxelData.Size.Z);
 
             if (settings.Yaw >= 90) {
                 xRange = xRange.Reverse();
@@ -111,8 +111,8 @@ namespace Voxels {
 
         void CreateMesh(VoxelData voxelData) {
             if (settings.FloorShadow) {
-                for (var x = -1; x <= voxelData.size.X; x++) {
-                    for (var y = -1; y <= voxelData.size.Y; y++) {
+                for (var x = -1; x <= voxelData.Size.X; x++) {
+                    for (var y = -1; y <= voxelData.Size.Y; y++) {
                         RenderQuad(voxelData, new XYZ(x, y, -1), Color.Transparent, 1f, XYZ.OneZ); // Top
                     }
                 }
