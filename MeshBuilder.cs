@@ -148,7 +148,7 @@ namespace Voxels {
 
         void RenderQuad(VoxelData voxelData, XYZ p, Color color, float lightLevel, XYZ faceUp) {
             // Only render quad if face it isn't hidden by voxel above it
-            if (voxelData[p + faceUp].Index == 0) {
+            if (!voxelData[p + faceUp].IsVisible) {
                 // Calculate adjacent voxels
                 var adjacent = new XYZ[] { XYZ.Zero, XYZ.Zero, XYZ.Zero, XYZ.Zero };
                 if (faceUp == -XYZ.OneX) { adjacent = new[] { XYZ.OneY, XYZ.OneZ, -XYZ.OneY, -XYZ.OneZ }; }

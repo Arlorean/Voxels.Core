@@ -38,11 +38,20 @@ namespace Voxels {
         public static readonly XYZ Min = new XYZ(int.MinValue, int.MinValue, int.MinValue);
         public static readonly XYZ Max = new XYZ(int.MaxValue, int.MaxValue, int.MaxValue);
 
+        public static XYZ operator &(XYZ a, int b) {
+            return new XYZ(a.X & b, a.Y & b, a.Z & b);
+        }
+        public static XYZ operator >>(XYZ a, int b) {
+            return new XYZ(a.X >> b, a.Y >> b, a.Z >> b);
+        }
         public static XYZ operator *(XYZ a, int b) {
             return new XYZ(a.X * b, a.Y * b, a.Z * b);
         }
         public static XYZ operator /(XYZ a, int b) {
             return new XYZ(a.X / b, a.Y / b, a.Z / b);
+        }
+        public static XYZ operator %(XYZ a, int b) {
+            return new XYZ(a.X % b, a.Y % b, a.Z % b);
         }
         public static XYZ operator +(XYZ a, XYZ b) {
             return new XYZ(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
@@ -73,7 +82,7 @@ namespace Voxels {
         }
 
         public override int GetHashCode() {
-            return (int)(X ^ (X >> 32) ^ Y ^ (Y >> 32) ^ Z ^ (Z >> 32));
+            return (int)((X << 16) ^ (Y << 8) ^ Z);
         }
 
         public override string ToString() {

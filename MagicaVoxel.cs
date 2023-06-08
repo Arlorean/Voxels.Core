@@ -17,7 +17,8 @@ namespace Voxels
         public int Version { get; private set; } = 200;
         public List<Node> Nodes { get; private set; } = new List<Node>();
         public List<VoxelData> Models { get; private set; } = new List<VoxelData>();
-        public Color[] Palette { get; private set; }
+        public Layer[] Layers { get; private set; } = DefaultLayers;
+        public Color[] Palette { get; private set; } = DefaultPalette;
 
         public MagicaVoxel() { }
 
@@ -34,6 +35,8 @@ namespace Voxels
 
         public class TransformNode : Node {
             public int childNodeId;
+            public int layerId;
+
             public List<TransformFrame> Frames { get; } = new List<TransformFrame>();
         }
 
@@ -109,11 +112,39 @@ namespace Voxels
             }
         }
 
+        public class Layer {
+            public int layerId;
+            public string layerName;
+            public bool hidden;
+
+            public static Layer Read(BinaryReader reader) {
+                var layer = new Layer();
+
+                layer.layerId = reader.ReadInt32();
+
+                var layerAttributes = ReadDICT(reader);
+                if (layerAttributes.TryGetValue("_name", out var layerName)) {
+                    layer.layerName = layerName;
+                }
+                if (layerAttributes.TryGetValue("_hidden", out var hidden)) {
+                    layer.hidden = (hidden == "1");
+                }
+
+                var reservedId = reader.ReadInt32(); Debug.Assert(reservedId == -1);
+
+                return layer;
+            }
+
+            public override string ToString() {
+                return layerName ?? layerId.ToString();
+            }
+        }
+
         public class DICT : Dictionary<string, string> { }
 
-        public static Color GetDefaultColor(int i) {
-            return new Color(DefaultColors[i]);
-        }
+        static Layer[] DefaultLayers => Enumerable.Range(0,16).Select(i => new Layer { layerId = i }).ToArray();
+
+        static Color[] DefaultPalette => DefaultColors.Select(c => new Color(c)).ToArray();
 
         static readonly uint[] DefaultColors = new uint[] { // 0xAABBGGRR (little endian)
             0x00000000, 0xffffffff, 0xffccffff, 0xff99ffff, 0xff66ffff, 0xff33ffff, 0xff00ffff, 0xffffccff, 0xffccccff, 0xff99ccff, 0xff66ccff, 0xff33ccff, 0xff00ccff, 0xffff99ff, 0xffcc99ff, 0xff9999ff,
@@ -200,7 +231,6 @@ namespace Voxels
                     break;
 
                 case RGBA:
-                    Palette = new Color[256];
                     // last color is not used, so we only need to read 255 colors
                     for (var i = 1; i < 256; ++i) {
                         byte r = reader.ReadByte();
@@ -221,7 +251,7 @@ namespace Voxels
 
                         node.childNodeId = reader.ReadInt32();
                         var reservedId = reader.ReadInt32(); Debug.Assert(reservedId == -1);
-                        var layerId = reader.ReadInt32();
+                        node.layerId = reader.ReadInt32();
 
                         var numFrames = reader.ReadInt32(); Debug.Assert(numFrames > 0);
                         for (int i = 0; i < numFrames; i++) {
@@ -258,11 +288,8 @@ namespace Voxels
                     break;
 
                 case LAYR: {
-                        var layerId = reader.ReadInt32();
-                        var layerAttributes = ReadDICT(reader);
-                        var reservedId = reader.ReadInt32(); Debug.Assert(reservedId == -1);
-
-                        // TODO: Process layers
+                        var layer = Layer.Read(reader);
+                        Layers[layer.layerId] = layer;
                     }
                     break;
 
@@ -314,13 +341,6 @@ namespace Voxels
                     Console.WriteLine($"Skipping unknown chunk: '{chunkName}'");
                     reader.ReadBytes(chunkSize);
                     break;
-                }
-            }
-
-            if (voxelData != null && Palette == null) {
-                voxelData.Colors = new Color[256];
-                for (var i=0; i < DefaultColors.Length; ++i) {
-                    voxelData.Colors[i] = new Color(DefaultColors[i]);
                 }
             }
  
@@ -409,6 +429,11 @@ namespace Voxels
             Write(new BinaryWriter(stream));
         }
 
+        bool IsVisible(TransformNode transform) { 
+            if (transform.layerId < 0 || transform.layerId >= Layers.Length) { return true; }
+            return !Layers[transform.layerId].hidden;
+        }
+
         // Render the tree of nodes to a single set of VoxelData
         public VoxelData Flatten() {
             if (Nodes.Count > 0) {
@@ -431,7 +456,7 @@ namespace Voxels
         }
 
         void GetWorldAABB(Node node, Matrix4x4 parentMatrix, BoundsXYZ worldBounds) {
-            if (node is TransformNode transform) {
+            if (node is TransformNode transform && IsVisible(transform)) {
                 var newMatrix = transform.Frames[0].matrix * parentMatrix;
                 if (transform.childNodeId >= 0) {
                     var childNode = Nodes[transform.childNodeId];
@@ -456,7 +481,7 @@ namespace Voxels
         }
 
         void CollateVoxelData(Node node, Matrix4x4 parentMatrix, VoxelData voxelData) {
-            if (node is TransformNode transform) {
+            if (node is TransformNode transform && IsVisible(transform)) {
                 var newMatrix = transform.Frames[0].matrix * parentMatrix;
                 if (transform.childNodeId >= 0) {
                     var childNode = Nodes[transform.childNodeId];

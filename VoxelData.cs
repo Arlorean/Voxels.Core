@@ -9,19 +9,59 @@ namespace Voxels {
     /// NOTE: XY is the horizontal plane and Z is the vertical axis.
     /// </summary>
     public class VoxelData : IEnumerable<XYZ> {
-        Voxel[] voxels;
+        Dictionary<XYZ,Chunk> chunks = new Dictionary<XYZ, Chunk>();
+
+        public class Chunk {
+            byte[] voxels = new byte[Size*Size*Size];
+
+            /// <summary>
+            /// Count of visible voxels in chunk.
+            /// </summary>
+            public int Count { get; private set; }
+
+            public const int Size = 32;
+
+            int IndexOf(XYZ p) {
+                return p.X * (Size * Size) + p.Y * Size + p.Z;
+            }
+
+            public byte this[XYZ p] {
+                get {
+                    return voxels[IndexOf(p)];
+                }
+                set {
+                    var i = IndexOf(p);
+                    var oldValue = voxels[i];
+                    if (oldValue != value) {
+                        voxels[i] = value;
+
+                        if (oldValue == 0) {
+                            Count++;
+                        }
+                        else {
+                            Count--;
+                        }
+                    }
+                }
+            }
+        }
 
         public XYZ Size { get; }
         public Color[] Colors { get; set; }
 
         public VoxelData(XYZ size, Color[] colors=null) {
-            this.voxels = new Voxel[size.Volume];
             this.Size = size;
             this.Colors = colors;
         }
 
         public int Count {
-            get { return voxels.Count(v => v.IsVisible); }
+            get { 
+                var count = 0;
+                foreach (var chunk in chunks.Values) {
+                    count += chunk.Count;
+                }
+                return count;
+            }
         }
 
         public bool IsValid(XYZ p) {
@@ -33,13 +73,31 @@ namespace Voxels {
         public Voxel this[XYZ p] {
             get {
                 if (IsValid(p)) {
-                    return voxels[p.X * (Size.Y * Size.Z) + p.Y * Size.Z + p.Z];
+                    var c = p / Chunk.Size;
+                    if (chunks.TryGetValue(c, out var chunk)) {
+                        return new Voxel(chunk[p % Chunk.Size]);
+                    }
                 }
                 return Voxel.Empty;
             }
             set {
                 if (IsValid(p)) {
-                    voxels[p.X * (Size.Y * Size.Z) + p.Y * Size.Z + p.Z] = value;
+                    var c = p / Chunk.Size;
+                    if (!chunks.TryGetValue(c, out var chunk)) {
+                        // Chunk doesn't currently exist - add one unless setting to invisible
+                        if (value.IsVisible) {
+                            chunks.Add(c, chunk = new Chunk());
+                        }
+                    }
+
+                    if (chunk != null) {
+                        chunk[p % Chunk.Size] = (byte)value.Index;
+
+                        // Chunk now entirely invisible - remove it
+                        if (chunk.Count == 0) {
+                            chunks.Remove(c);
+                        }
+                    }
                 }
                 else {
                     throw new ArgumentOutOfRangeException("p", p, "point not in voxel data set.");
@@ -53,29 +111,12 @@ namespace Voxels {
             }
         }
 
-        public Color ColorOf(Voxel voxel) {
+        Color ColorOf(Voxel voxel) {
             return Colors != null ? Colors[voxel.Index] : voxel.Color;
         }
+
         public Color ColorOf(XYZ p) {
             return ColorOf(this[p]);
-        }
-
-        public VoxelData CreatePalette() {
-            var colors = new List<Color>() { Color.Transparent };
-            var voxelData = new VoxelData(this.Size, new Color[256]);
-            foreach (var v in this) {
-                var c = ColorOf(v);
-                var i = colors.IndexOf(c);
-                if (i == -1) {
-                    i = colors.Count;
-                    colors.Add(c);
-                }
-                voxelData[v] = new Voxel((uint)i);
-            }
-            for (var i = 0; i < 256; i++) {
-                voxelData.Colors[i] = i < colors.Count ? colors[i] : MagicaVoxel.GetDefaultColor(i);
-            }
-            return voxelData;
         }
 
         public IEnumerator<XYZ> GetEnumerator() {
