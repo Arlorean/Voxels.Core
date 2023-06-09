@@ -46,6 +46,7 @@ namespace Voxels {
             }
         }
 
+        public BoundsXYZ Bounds => new BoundsXYZ(XYZ.Zero, Size-XYZ.One);
         public XYZ Size { get; }
         public Color[] Colors { get; set; }
 

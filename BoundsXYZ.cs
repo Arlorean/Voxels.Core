@@ -23,6 +23,11 @@ namespace Voxels {
             Max = Min+size - XYZ.One;
         }
 
+        public BoundsXYZ(XYZ min, XYZ max) {
+            Min = min;
+            Max = max;
+        }
+
         public XYZ Size => (Max - Min + XYZ.One);
 
         public void Add(BoundsXYZ other) {

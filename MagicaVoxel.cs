@@ -85,7 +85,12 @@ namespace Voxels
                     }
                     lastModel = model;
                 }
-                frameIndex -= lastModel.frameIndex;
+                if (lastModel.frameIndex == 0) {
+                    frameIndex = 0;
+                }
+                else {
+                    frameIndex -= lastModel.frameIndex;
+                }
                 return GetModel(frameIndex);
             }
         }
@@ -380,6 +385,11 @@ namespace Voxels
                     break;
                 }
             }
+
+            // When no nodes exist just add the palette to the first  
+            if (Nodes.Count == 0) {
+                Models[0].Colors = Palette;
+            }
  
             return true;
         }
@@ -477,6 +487,9 @@ namespace Voxels
         }
 
         public BoundsXYZ GetWorldAABB(int startFrame, int endFrame) {
+            if (Nodes.Count == 0) {
+                return Models[0].Bounds;
+            }
             var worldBounds = BoundsXYZ.CreateEmpty();
             for (int frame = startFrame; frame <= endFrame; frame++) {
                 GetWorldAABB(frame, Nodes[0], Matrix4x4.Identity, worldBounds);
