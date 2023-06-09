@@ -41,6 +41,23 @@ namespace Voxels
 
             public List<TransformFrame> Frames { get; } = new List<TransformFrame>();
 
+            /// <summary>
+            /// Interpolate matrix based on key frames.
+            /// </summary>
+            public Matrix4x4 GetFrameMatrix(int frameIndex) {
+                TransformFrame lastFrame = null;
+                foreach (var frame in Frames) {
+                    if (frame.frameIndex == frameIndex) {
+                        return frame.matrix;
+                    }
+                    if (frame.frameIndex > frameIndex) {
+                        return lastFrame.matrix;
+                    }
+                    lastFrame = frame;
+                }
+                return lastFrame.matrix;
+            }
+
             public override string ToString() => name;
         }
 
@@ -49,24 +66,42 @@ namespace Voxels
         }
 
         public class ShapeNode : Node {
-            public List<ShapeFrame> Frames { get; } = new List<ShapeFrame>();
+            public List<ShapeModel> Models { get; } = new List<ShapeModel>();
+
+            /// <summary>
+            /// Find nearest frame with frameIndex greater than or equal to requested frameIndex.
+            /// </summary>
+            public ShapeModel GetModel(int frameIndex) {
+                ShapeModel lastModel = null;
+                foreach (var model in Models) {
+                    if (model.frameIndex == frameIndex) {
+                        return model;
+                    }
+                    if (model.frameIndex > frameIndex) {
+                        return lastModel;
+                    }
+                    lastModel = model;
+                }
+                frameIndex -= lastModel.frameIndex;
+                return GetModel(frameIndex);
+            }
         }
 
-        public class ShapeFrame {
+        public class ShapeModel {
             public int modelId;
             public int frameIndex;
 
-            public static ShapeFrame Read(BinaryReader reader) {
-                var frame = new ShapeFrame();
+            public static ShapeModel Read(BinaryReader reader) {
+                var model = new ShapeModel();
 
-                frame.modelId = reader.ReadInt32();
+                model.modelId = reader.ReadInt32();
 
                 var dict = ReadDICT(reader);
                 if (dict.TryGetValue("_f", out var f)) {
-                    frame.frameIndex = int.Parse(f);
+                    model.frameIndex = int.Parse(f);
                 }
 
-                return frame;
+                return model;
             }
         }
 
@@ -281,7 +316,7 @@ namespace Voxels
 
                         var numModels = reader.ReadInt32(); Debug.Assert(numModels > 0);
                         for (int i = 0; i < numModels; i++) {
-                            node.Frames.Add(ShapeFrame.Read(reader));
+                            node.Models.Add(ShapeModel.Read(reader));
                         }
                     }
                     break;
@@ -438,85 +473,104 @@ namespace Voxels
             return true;
         }
 
-        // Render the tree of nodes to a single set of VoxelData
-        public VoxelData Flatten() {
-            if (Nodes.Count > 0) {
-                var worldBounds = BoundsXYZ.CreateEmpty();
-                GetWorldAABB(Nodes[0], Matrix4x4.Identity, worldBounds);
+        public BoundsXYZ GetWorldAABB(int startFrame, int endFrame) {
+            var worldBounds = BoundsXYZ.CreateEmpty();
+            for (int frame = startFrame; frame <= endFrame; frame++) {
+                GetWorldAABB(frame, Nodes[0], Matrix4x4.Identity, worldBounds);
+            }
+            return worldBounds;
+        }
 
+        // Render the tree of nodes to a single set of VoxelData
+        public VoxelData Flatten(BoundsXYZ worldBounds, int frame = 0) {
+            if (Nodes.Count > 0) {
                 var voxelData = new VoxelData(worldBounds.Size, Palette);
                 var origin = (worldBounds.Size - XYZ.One) / 2;
                 var matrix = Matrix4x4.CreateTranslation(-worldBounds.Min.ToVector3());
-                CollateVoxelData(Nodes[0], matrix, voxelData);
+                CollateVoxelData(frame, Nodes[0], matrix, voxelData);
                 return voxelData;
             }
             else {
-                var model = Models[0];
-                if (model.Colors == null) {
-                    model.Colors = Palette;
-                }
-                return model;
+                return Models[0];
             }
         }
 
-        void GetWorldAABB(Node node, Matrix4x4 parentMatrix, BoundsXYZ worldBounds) {
+        // Render the tree of nodes to a single set of VoxelData
+        public VoxelData Flatten(int frame = 0) {
+            if (Nodes.Count > 0) {
+                var worldBounds = GetWorldAABB(frame, frame);
+
+                var voxelData = new VoxelData(worldBounds.Size, Palette);
+                var matrix = Matrix4x4.CreateTranslation(-worldBounds.Min.ToVector3());
+                CollateVoxelData(frame, Nodes[0], matrix, voxelData);
+                return voxelData;
+            }
+            else {
+                return Models[0];
+            }
+        }
+
+
+        void GetWorldAABB(int frameIndex, Node node, Matrix4x4 parentMatrix, BoundsXYZ worldBounds) {
             if (node is TransformNode transform && IsVisible(transform)) {
-                var newMatrix = transform.Frames[0].matrix * parentMatrix;
+                var newMatrix = transform.GetFrameMatrix(frameIndex) * parentMatrix;
                 if (transform.childNodeId >= 0) {
                     var childNode = Nodes[transform.childNodeId];
-                    GetWorldAABB(childNode, newMatrix, worldBounds);
+                    GetWorldAABB(frameIndex, childNode, newMatrix, worldBounds);
                 }
             }
 
             if (node is GroupNode group) {
                 foreach (var childNodeId in group.ChildNodeIds) {
                     var childNode = Nodes[childNodeId];
-                    GetWorldAABB(childNode, parentMatrix, worldBounds);
+                    GetWorldAABB(frameIndex, childNode, parentMatrix, worldBounds);
                 }
             }
+
             if (node is ShapeNode shape) {
-                foreach (var frame in shape.Frames) {
-                    var model = Models[frame.modelId];
-                    var bounds = new BoundsXYZ(model.Size);
-                    bounds = bounds.Transform(parentMatrix);
-                    worldBounds.Add(bounds);
-                }
+                var shapeModel = shape.GetModel(frameIndex);
+
+                var model = Models[shapeModel.modelId];
+                var bounds = new BoundsXYZ(model.Size);
+                bounds = bounds.Transform(parentMatrix);
+                worldBounds.Add(bounds);
             }
         }
 
-        void CollateVoxelData(Node node, Matrix4x4 parentMatrix, VoxelData voxelData) {
+        void CollateVoxelData(int frameIndex, Node node, Matrix4x4 parentMatrix, VoxelData voxelData) {
             if (node is TransformNode transform && IsVisible(transform)) {
-                var newMatrix = transform.Frames[0].matrix * parentMatrix;
+                var newMatrix = transform.GetFrameMatrix(frameIndex) * parentMatrix;
                 if (transform.childNodeId >= 0) {
                     var childNode = Nodes[transform.childNodeId];
-                    CollateVoxelData(childNode, newMatrix, voxelData);
+                    CollateVoxelData(frameIndex, childNode, newMatrix, voxelData);
                 }
             }
 
             if (node is GroupNode group) {
                 foreach (var childNodeId in group.ChildNodeIds) {
                     var childNode = Nodes[childNodeId];
-                    CollateVoxelData(childNode, parentMatrix, voxelData);
+                    CollateVoxelData(frameIndex, childNode, parentMatrix, voxelData);
                 }
             }
-            if (node is ShapeNode shape) {
-                foreach (var frame in shape.Frames) {
-                    var model = Models[frame.modelId];
-                    var origin = new BoundsXYZ(model.Size).Min;
 
-                    foreach (var p in model) {
-                        var v = model[p];
-                        if (v.IsVisible) {
-                            // Transform local voxel position to node relative position (origin at 0,0,0)
-                            var n = p + origin;
-                            var q = XYZ.FromVector3(Vector3.Transform(n.ToVector3(), parentMatrix));
-                            //if (voxelData.IsValid(q)) {
-                                voxelData[q] = v;
-                            //}
-                            //else {
-                                // Off by one error here. Not sure from where...
-                            //}
-                        }
+            if (node is ShapeNode shape) {
+                var shapeModel = shape.GetModel(frameIndex);
+
+                var model = Models[shapeModel.modelId];
+                var origin = new BoundsXYZ(model.Size).Min;
+
+                foreach (var p in model) {
+                    var v = model[p];
+                    if (v.IsVisible) {
+                        // Transform local voxel position to node relative position (origin at 0,0,0)
+                        var n = p + origin;
+                        var q = XYZ.FromVector3(Vector3.Transform(n.ToVector3(), parentMatrix));
+                        //if (voxelData.IsValid(q)) {
+                            voxelData[q] = v;
+                        //}
+                        //else {
+                            // Off by one error here. Not sure from where...
+                        //}
                     }
                 }
             }
