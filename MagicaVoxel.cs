@@ -17,7 +17,7 @@ namespace Voxels
         public int Version { get; private set; } = 200;
         public List<Node> Nodes { get; private set; } = new List<Node>();
         public List<VoxelData> Models { get; private set; } = new List<VoxelData>();
-        public Layer[] Layers { get; private set; } = DefaultLayers;
+        public Dictionary<int,Layer> Layers { get; private set; } = DefaultLayers;
         public Color[] Palette { get; private set; } = DefaultPalette;
 
         public MagicaVoxel() { }
@@ -36,8 +36,12 @@ namespace Voxels
         public class TransformNode : Node {
             public int childNodeId;
             public int layerId;
+            public string name;
+            public bool hidden;
 
             public List<TransformFrame> Frames { get; } = new List<TransformFrame>();
+
+            public override string ToString() => name;
         }
 
         public class GroupNode : Node {
@@ -83,21 +87,16 @@ namespace Voxels
                     var s2 = (b & 0b00100000) >> 5 == 0 ? 1 : -1;
                     var s3 = (b & 0b01000000) >> 6 == 0 ? 1 : -1;
 
-                    // NOTE: If I don't do this then the angles are all rotated the opposite way.
-                    //       This changes the handedness of the matrix for rotations.
-                    s1 = -s1;
-                    s2 = -s2;
-
                     frame.matrix.M11 = i1 == 0 ? s1 : 0;
-                    frame.matrix.M12 = i1 == 1 ? s1 : 0;
-                    frame.matrix.M13 = i1 == 2 ? s1 : 0;
+                    frame.matrix.M21 = i1 == 1 ? s1 : 0;
+                    frame.matrix.M31 = i1 == 2 ? s1 : 0;
 
-                    frame.matrix.M21 = i2 == 0 ? s2 : 0;
+                    frame.matrix.M12 = i2 == 0 ? s2 : 0;
                     frame.matrix.M22 = i2 == 1 ? s2 : 0;
-                    frame.matrix.M23 = i2 == 2 ? s2 : 0;
+                    frame.matrix.M32 = i2 == 2 ? s2 : 0;
 
-                    frame.matrix.M31 = i3 == 0 ? s3 : 0;
-                    frame.matrix.M32 = i3 == 1 ? s3 : 0;
+                    frame.matrix.M13 = i3 == 0 ? s3 : 0;
+                    frame.matrix.M23 = i3 == 1 ? s3 : 0;
                     frame.matrix.M33 = i3 == 2 ? s3 : 0;
                 }
                 if (dict.TryGetValue("_t", out var t)) {
@@ -135,14 +134,12 @@ namespace Voxels
                 return layer;
             }
 
-            public override string ToString() {
-                return layerName ?? layerId.ToString();
-            }
+            public override string ToString() => layerName ?? layerId.ToString();
         }
 
         public class DICT : Dictionary<string, string> { }
 
-        static Layer[] DefaultLayers => Enumerable.Range(0,16).Select(i => new Layer { layerId = i }).ToArray();
+        static Dictionary<int,Layer> DefaultLayers => Enumerable.Range(0,16).ToDictionary(i => i, i => new Layer { layerId = i });
 
         static Color[] DefaultPalette => DefaultColors.Select(c => new Color(c)).ToArray();
 
@@ -247,6 +244,8 @@ namespace Voxels
                         var node = new TransformNode();
                         node.id = reader.ReadInt32();
                         node.attributes = ReadDICT(reader);
+                        node.hidden = node.attributes.TryGetValue("_hidden", out var hidden) && hidden == "1";
+                        node.attributes.TryGetValue("_name", out node.name);
                         Nodes.Add(node);
 
                         node.childNodeId = reader.ReadInt32();
@@ -429,9 +428,14 @@ namespace Voxels
             Write(new BinaryWriter(stream));
         }
 
-        bool IsVisible(TransformNode transform) { 
-            if (transform.layerId < 0 || transform.layerId >= Layers.Length) { return true; }
-            return !Layers[transform.layerId].hidden;
+        bool IsVisible(TransformNode transform) {
+            if (transform.hidden) {
+                return false;
+            }
+            if (Layers.TryGetValue(transform.layerId, out var layer) && layer.hidden) {
+                return false;
+            }
+            return true;
         }
 
         // Render the tree of nodes to a single set of VoxelData
