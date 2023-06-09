@@ -51,7 +51,10 @@ namespace Voxels
                         return frame.matrix;
                     }
                     if (frame.frameIndex > frameIndex) {
-                        return lastFrame.matrix;
+                        var t = ((float)frameIndex - lastFrame.frameIndex)/(frame.frameIndex - lastFrame.frameIndex);
+                        var matrix = lastFrame.matrix;
+                        matrix.Translation = XYZ.FromVector3(Vector3.Lerp(lastFrame.matrix.Translation, frame.matrix.Translation, t)).ToVector3();
+                        return matrix;
                     }
                     lastFrame = frame;
                 }
