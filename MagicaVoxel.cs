@@ -14,15 +14,15 @@ namespace Voxels
     /// https://ephtracy.github.io/
     /// </summary>
     public class MagicaVoxel {
-        public int Version { get; private set; } = 200;
+        public uint Version { get; private set; } = 200;
         public List<Node> Nodes { get; private set; } = new List<Node>();
-        public List<VoxelData> Models { get; private set; } = new List<VoxelData>();
+        public List<VoxelDataBytes> Models { get; private set; } = new List<VoxelDataBytes>();
         public Dictionary<int,Layer> Layers { get; private set; } = DefaultLayers;
         public Color[] Palette { get; private set; } = DefaultPalette;
 
         public MagicaVoxel() { }
 
-        public MagicaVoxel(VoxelData voxelData) {
+        public MagicaVoxel(VoxelDataBytes voxelData) {
             Version = 150;
             Models.Add(voxelData);
             Palette = voxelData.Colors;
@@ -228,9 +228,9 @@ namespace Voxels
                 return false;
             }
 
-            Version = reader.ReadInt32();
+            Version = reader.ReadUInt32();
 
-            var voxelData = null as VoxelData;
+            var voxelData = null as VoxelDataBytes;
 
             while (reader.PeekChar() != -1) {
                 var chunkId = reader.ReadUInt32();
@@ -255,7 +255,7 @@ namespace Voxels
                     var sy = reader.ReadInt32();
                     var sz = reader.ReadInt32();
                     Debug.Assert(chunkSize == sizeof(int) * 3);
-                    voxelData = new VoxelData(new XYZ(sx, sy, sz));
+                    voxelData = new VoxelDataBytes(new XYZ(sx, sy, sz), DefaultPalette);
                     Models.Add(voxelData);
                     break;
 
@@ -387,8 +387,8 @@ namespace Voxels
             }
 
             // When no nodes exist just add the palette to the first  
-            if (Nodes.Count == 0) {
-                Models[0].Colors = Palette;
+            foreach (var model in Models) {
+                model.Colors = Palette;
             }
  
             return true;
@@ -498,9 +498,9 @@ namespace Voxels
         }
 
         // Render the tree of nodes to a single set of VoxelData
-        public VoxelData Flatten(BoundsXYZ worldBounds, int frame = 0) {
+        public VoxelDataBytes Flatten(BoundsXYZ worldBounds, int frame = 0) {
             if (Nodes.Count > 0) {
-                var voxelData = new VoxelData(worldBounds.Size, Palette);
+                var voxelData = new VoxelDataBytes(worldBounds.Size, Palette);
                 var origin = (worldBounds.Size - XYZ.One) / 2;
                 var matrix = Matrix4x4.CreateTranslation(-worldBounds.Min.ToVector3());
                 CollateVoxelData(frame, Nodes[0], matrix, voxelData);
@@ -512,11 +512,11 @@ namespace Voxels
         }
 
         // Render the tree of nodes to a single set of VoxelData
-        public VoxelData Flatten(int frame = 0) {
+        public VoxelDataBytes Flatten(int frame = 0) {
             if (Nodes.Count > 0) {
                 var worldBounds = GetWorldAABB(frame, frame);
 
-                var voxelData = new VoxelData(worldBounds.Size, Palette);
+                var voxelData = new VoxelDataBytes(worldBounds.Size, Palette);
                 var matrix = Matrix4x4.CreateTranslation(-worldBounds.Min.ToVector3());
                 CollateVoxelData(frame, Nodes[0], matrix, voxelData);
                 return voxelData;

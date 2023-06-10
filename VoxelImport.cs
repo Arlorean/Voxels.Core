@@ -6,7 +6,7 @@ namespace Voxels {
             using (var stream = File.OpenRead(path)) {
                 switch (Path.GetExtension(path).ToLowerInvariant()) {
                 case ".vox": return VoxFile.Read(stream);
-                case ".qb": return QbFile.Read(stream);
+                case ".qb": return QbFile.ReadAndFlatten(stream);
                 }
             }
             return null;

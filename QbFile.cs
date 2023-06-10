@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using static Voxels.MagicaVoxel;
 
 namespace Voxels {
     /// <summary>
@@ -10,14 +11,20 @@ namespace Voxels {
     /// http://minddesk.com/learn/article.php?id=22
     /// </summary>
     public class QbFile {
+        public uint Version { get; private set; } = 200;
+
+        VoxelDataColors voxelData;
+
         const uint CODEFLAG = 2;
         const uint NEXTSLICEFLAG = 6;
 
-        static VoxelData Read(BinaryReader reader) {
-            var versionMajor = reader.ReadByte();
-            var versionMinor = reader.ReadByte();
-            var versionRelease = reader.ReadByte();
-            var versionBuild = reader.ReadByte();
+        public QbFile() { }
+
+        public VoxelData Flatten() { return voxelData; }
+
+        bool Read(BinaryReader reader) {
+            // Version bytes are major, minor, release, build
+            Version = reader.ReadUInt32();
 
             var colorFormat = reader.ReadInt32(); // 0=RGBA, 1=BGRA
             var zAxisOrientation = reader.ReadInt32(); // 0=LeftHanded, 1=RightHanded
@@ -43,7 +50,7 @@ namespace Voxels {
                 };
                 positions.Add(new XYZ(posX, posY, posZ));
 
-                var matrix = new VoxelData(new XYZ(sizeX, sizeY, sizeZ));
+                var matrix = new VoxelDataColors(new XYZ(sizeX, sizeY, sizeZ));
                 if (compression == 0) {
                     for (var z = 0; z < sizeZ; z++) {
                         for (var y = 0; y < sizeY; y++) {
@@ -103,7 +110,7 @@ namespace Voxels {
                     return new XYZ(Math.Max(a.X, v.X), Math.Max(a.Y, v.Y), Math.Max(a.Z, v.Z));
                 });
             var extents = maxExtents - minExtents;
-            var voxelData = new VoxelData(extents, null);
+            var voxelData = new VoxelDataColors(extents);
 
             for (var i = 0; i < matrixCount; ++i) {
                 var matrix = matrices[i];
@@ -121,7 +128,7 @@ namespace Voxels {
 
             // Orient .qb so thumbnail matches Qubicle default view
             var s = voxelData.Size;
-            var d = new VoxelData(new XYZ(s.X, s.Z, s.Y), voxelData.Colors);
+            var d = new VoxelDataColors(new XYZ(s.X, s.Z, s.Y));
             foreach (var i in voxelData) {
                 if (zAxisOrientation == 0) { // LEFT
                     d[new XYZ(i.X, s.Z - 1 - i.Z, i.Y)] = voxelData[i];
@@ -130,11 +137,19 @@ namespace Voxels {
                     d[new XYZ(i.X, i.Z, i.Y)] = voxelData[i];
                 }
             }
-            return d;
+
+            this.voxelData = d;
+            return true;
         }
 
-        public static VoxelData Read(Stream stream) {
+        public bool Read(Stream stream) {
             return Read(new BinaryReader(stream));
+        }
+
+        public static VoxelData ReadAndFlatten(Stream stream) {
+            var quibicle = new QbFile();
+            quibicle.Read(stream);
+            return quibicle.Flatten();
         }
     }
 }

@@ -15,7 +15,7 @@ namespace Voxels {
             var size = new XYZ(sx, sy, sz);
 
             var colors = new Color[256];
-            var voxelData = new VoxelData(size, colors);
+            var voxelData = new VoxelDataBytes(size, colors);
 
             // Read voxels
             for (var x = 0; x < sx; x++) {
